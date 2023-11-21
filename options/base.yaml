@@ -50,8 +50,8 @@ optim:
         type: step
         step_size: 13
         gamma: 0.1
-batch_size: 16                                              # batch size
+batch_size: 8                                              # batch size
 resume: false                                               # not test
 fp16:                                                       # not test
 vis_dir: 'vis'
-max_epochs: 30
+max_epochs: 20  #30

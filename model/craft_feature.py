@@ -38,12 +38,13 @@ class Model(BaseModel):
     def forward(self,opt):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         # origin_H_W is the inital localization of camera
+        # import pdb; pdb.set_trace()
         if opt.task != 'test_vid':
             opt.origin_H_W=None
         if hasattr(opt.arch.gen,'style_inject'):
             # replace the predicted sky with selected sky histogram
             if opt.arch.gen.style_inject == 'histo':
-                self.out_put =  self.netG(self.real_A,self.sky_histc.detach(),opt) 
+                self.out_put =  self.netG(self.real_A,self.sky_histc,opt) #self.sky_histc.detach()
             else:
                 raise Exception('Unknown style inject mode')
         else:
@@ -81,16 +82,17 @@ class Model(BaseModel):
         net_D_output = self.netD(self.real_B, self.out_put) 
         pred_fake = self._get_outputs(net_D_output, real=False)
         self.loss['GAN'] = self.criteria['GAN'](pred_fake, True, dis_update=False)
-        if 'GaussianKL' in self.criteria:
-            self.loss['GaussianKL'] = self.criteria['GaussianKL'](self.out_put['mu'], self.out_put['logvar'])
+        # import pdb; pdb.set_trace()
+        # if 'GaussianKL' in self.criteria:
+        #     self.loss['GaussianKL'] = self.criteria['GaussianKL'](self.out_put['mu'], self.out_put['logvar'])
         if 'L1' in self.criteria:
             self.loss['L1'] = self.criteria['L1'](self.real_B,self.fake_B)
         if 'L2' in self.criteria:
             self.loss['L2'] = self.criteria['L2'](self.real_B,self.fake_B)
         if 'SSIM' in self.criteria:
             self.loss['SSIM'] = 1-self.criteria['SSIM'](self.real_B, self.fake_B)
-        if 'GaussianKL' in self.criteria:
-            self.loss['GaussianKL'] = self.criteria['GaussianKL'](self.out_put['mu'], self.out_put['logvar'])
+        # if 'GaussianKL' in self.criteria:
+        #     self.loss['GaussianKL'] = self.criteria['GaussianKL'](self.out_put['mu'], self.out_put['logvar'])
         if 'sky_inner' in self.criteria:
             self.loss['sky_inner'] = self.criteria['sky_inner'](self.out_put.opacity, 1-self.sky_mask)
         if 'Perceptual' in self.criteria:
@@ -107,19 +109,29 @@ class Model(BaseModel):
 
     def load_dataset(self,opt):
         data = importlib.import_module("data.{}".format(opt.data.dataset))
+        # import pdb; pdb.set_trace()
         if opt.task in ["train", "Train"]:
-            train_data = data.Dataset(opt,"train",opt.data.train_sub)
+            if opt.data.dataset == 'brooklyn':
+                train_data = data.Dataset("train")
+                # train_data.getitem(1)
+            else:
+                train_data = data.Dataset(opt,"train",opt.data.train_sub)#原代码
             
             self.train_loader = DataLoader(train_data,batch_size=opt.batch_size,shuffle=True,num_workers=opt.data.num_workers,drop_last=True)
             self.len_train_loader = len(self.train_loader)
-
-        val_data   = data.Dataset(opt,"val")
+        
+        if opt.data.dataset == 'brooklyn':
+            val_data   = data.Dataset("test")
+        else:
+            val_data   = data.Dataset(opt,"val")  #原代码
+        
         opt.batch_size = 1 if opt.task in ["test" , "val","vis_test",'test_vid','test_sty'] else opt.batch_size
         opt.batch_size = 1 if opt.task=='test_speed' else opt.batch_size
         self.val_loader = DataLoader(val_data,batch_size=opt.batch_size,shuffle=False,num_workers=opt.data.num_workers)
         self.len_val_loader   = len(self.val_loader)
         # you can select one random image as a style of all predicted skys
         # if None, we use the corresponding style of GT 
+        # import pdb; pdb.set_trace()
         if opt.sty_img:
             sty_data = data.Dataset(opt,sty_img = opt.sty_img)
             self.sty_loader = DataLoader(sty_data,batch_size=1,num_workers=1,shuffle=False)

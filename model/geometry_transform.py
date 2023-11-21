@@ -38,7 +38,7 @@ def get_original_coord(opt):
 
     if opt.data.dataset in ['CVACT_Shi', 'CVACT', 'CVACThalf']:
         _theta = (1 - 2 * (_x) / H) * np.pi/2 # latitude 
-    elif opt.data.dataset in ['CVUSA']:
+    elif opt.data.dataset in ['CVUSA','brooklyn']: # brooklyn和CVUSA一样
         _theta = (1 - 2 * (_x) / H) * np.pi/4
     # _phi = math.pi* ( 1 -2* (_y)/W ) # longtitude 
     _phi = math.pi*( - 0.5 - 2* (_y)/W )
@@ -67,6 +67,9 @@ def render(opt,feature,voxel,pano_direction,PE=None):
         origin_height=2       ## the height of photo taken in real world scale
         realworld_scale = 30  ## the real world scale corresponding to [-1,1] regular cooridinate
     elif opt.data.dataset == 'CVUSA':
+        origin_height=2       
+        realworld_scale = 55  
+    elif opt.data.dataset == 'brooklyn':
         origin_height=2       
         realworld_scale = 55  
     else:

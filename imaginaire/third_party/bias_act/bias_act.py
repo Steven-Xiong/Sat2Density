@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import torch
 from torch import nn
 
-import bias_act_cuda
+# import bias_act_cuda
 
 # ----------------------------------------------------------------------------
 

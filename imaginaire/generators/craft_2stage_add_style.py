@@ -31,6 +31,7 @@ class Generator(nn.Module):
         self.denoise_model = inner_Generator_split(gen_cfg,gen_cfg.render_arch,data_cfg,render_input_channel,last_act='sigmoid')
         if self.style_inject:
             if self.style_inject=='histo':
+                
                 self.style_encode = histo_process(style_enc_cfg)
             elif self.style_inject=='perspective':
                 self.style_encode = StyleEncoder(style_enc_cfg)
@@ -50,7 +51,7 @@ class Generator(nn.Module):
         generator_inputs,opacity,depth = geo_outputs['rgb'],geo_outputs['opacity'],geo_outputs['depth']
         if 'voxel' in geo_outputs.keys():
             voxel = geo_outputs['voxel']
-                
+        # import pdb; pdb.set_trace()  #目前缺style_img
         if self.gen_cfg.cat_opa:
             generator_inputs = torch.cat((generator_inputs,opacity),dim=1)
         if self.gen_cfg.cat_depth:

@@ -17,7 +17,6 @@ from model import geometry_transform
 import csv
 
 
-
 class BaseModel(ABC):
     """This class is an abstract base class (ABC) for models.
     To create a subclass, you need to implement the following five functions:
@@ -193,6 +192,9 @@ class BaseModel(ABC):
         lpips_squ_val = []
         rmse_val = []
         sd_val = []
+        #计算FID
+        input_list = []
+        results_list = []
         with torch.no_grad():
             # set the sky of all images with predefined sky histogram.
             if opt.sty_img:
@@ -209,6 +211,7 @@ class BaseModel(ABC):
                     self.sky_histc = self.style_temp
                 
                 self.forward(opt)
+                # import pdb; pdb.set_trace()
                 rmse = torch.sqrt(self.mseloss(self.fake_B*255.,self.real_B*255.)).item()
                 sd = sd_func(self.real_B,self.fake_B)
                 rmse_val.append(rmse)
@@ -241,6 +244,124 @@ class BaseModel(ABC):
                         torchvision.utils.save_image( [self.real_A[i].cpu() ,torch.flip(torch.from_numpy(depth_sat_save).permute(2,0,1)/255.,[0])],os.path.join(opt.vis_dir,os.path.basename(self.image_paths[i]).rsplit('.', 1)[0]+'_sat.jpg'))
                         # ground opacity
                         torchvision.utils.save_image([self.out_put['opacity'][i]] ,os.path.join(opt.vis_dir,os.path.basename(self.image_paths[i]).rsplit('.', 1)[0]+'_sat.jpg'))
+                        
+                        # input_list.append(self.real_A[i].cpu())
+                        results_list.append(self.fake_B[i].cpu())
+                
+                if not os.path.exists(opt.vis_dir):
+                    os.mkdir(opt.vis_dir)
+                for i in range(len(self.fake_B)):
+                    
+                    # # cat generated ground images, GT ground images, predicted ground depth
+                    # torchvision.utils.save_image([self.fake_B[i].cpu(),self.real_B[i].cpu(),torch.flip(torch.from_numpy(depth_save).permute(2,0,1)/255.,[0])],os.path.join(opt.vis_dir,os.path.basename(self.image_paths[i])))
+                    # # cat GT satellite images, predicted satellite depth
+                    # torchvision.utils.save_image( [self.real_A[i].cpu() ,torch.flip(torch.from_numpy(depth_sat_save).permute(2,0,1)/255.,[0])],os.path.join(opt.vis_dir,os.path.basename(self.image_paths[i]).rsplit('.', 1)[0]+'_sat.jpg'))
+                    
+                    # input_list.append(self.real_B[i].unsqueeze(0))
+                    results_list.append(self.fake_B[i].unsqueeze(0))
+        
+        path='results/input1/'
+        device='cuda'
+        with open('/home/x.zhexiao/Sat2Density/test.txt','r') as f:
+            # import pdb; pdb.set_trace()
+            lines=f.readlines()
+            i=0
+            for line in lines:
+                # if i>=12:
+                #     break 
+                img_path = os.path.join(path,line.replace('\n',''))  
+                input=cv2.imread(img_path)
+                input = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)
+                input=input.astype('float32')/255.0
+                input_tmp = torch.from_numpy(input).unsqueeze(0).permute(0,3,1,2).to(device)
+                # input = torch.cat([input_tmp,input_tmp,input_tmp,input_tmp],dim=3)
+                input_list.append(input_tmp)
+                i=i+1
+        # import pdb;pdb.set_trace()
+        import torchvision.transforms as transforms
+        from pytorch_fid import fid_score
+        from skimage.metrics import peak_signal_noise_ratio as compute_psnr
+        from skimage.metrics import structural_similarity as compute_ssim
+        input_path = '/home/x.zhexiao/Sat2Density/results/input_aligned_nonormalize1'
+        output_path = '/home/x.zhexiao/Sat2Density/results/output_aligned_nonormalize1'
+        os.makedirs(input_path, exist_ok=True)
+        os.makedirs(output_path, exist_ok=True)
+        loss_fn_alex = lpips.LPIPS(net='alex').cuda()
+        device='cuda'
+        psnr_scores = []
+        ssim_scores = []
+        rmse_scores = []
+        sd_scores = []
+        lpips_scores = []
+        save_name = 'brooklyn_aligned_nonormalize1' 
+        i=0
+        for img1, img2 in zip(input_list, results_list):
+            i=i+1
+            # if i>20:
+            #     break
+            # import pdb; pdb.set_trace()
+            psnr_tmp = -10*self.mseloss(img1,img2).log10().item()
+            ssim_tmp = ssim(img1, img2,data_range=1.).item()
+            # psnr_tmp = compute_psnr(img1,img2)
+            # ssim_tmp = compute_ssim(img1,img2, channel_axis=-1, data_range=1.0) #或者ssim_tmp = compute_ssim(img1*255,img2*255, channel_axis=-1, data_range=255)
+            # mse = np.mean((img1 - img2) ** 2)
+            # rmse_tmp = np.sqrt(mse)
+            
+            #11.2改
+            rmse_tmp = torch.sqrt(self.mseloss(img1*255.,img2*255.)).item()
+            sd_tmp = sd_func(img1,img2)  
+                
+            lpips_tmp = torch.mean(loss_fn_alex(img1.to(device),img2.to(device))).cpu()
+            
+            psnr_scores.append(psnr_tmp)
+            ssim_scores.append(ssim_tmp)
+            rmse_scores.append(rmse_tmp)
+            sd_scores.append(sd_tmp)
+            lpips_scores.append(float(lpips_tmp))
+            with open('evaluate_'+save_name+'_psnr.txt','a') as f:
+                f.write(str(psnr_tmp)+'\n')
+            with open('evaluate_'+save_name+'_ssim.txt','a') as f:
+                f.write(str(ssim_tmp)+'\n')
+            with open('evaluate_'+save_name+'_rmse.txt','a') as f:
+                f.write(str(rmse_tmp)+'\n')
+            with open('evaluate_'+save_name+'_sd.txt','a') as f:
+                f.write(str(sd_tmp)+'\n')
+            with open('evaluate_'+save_name+'_lpips.txt','a') as f:
+                f.write(str(lpips_tmp)+'\n')
+    
+        #import pdb; pdb.set_trace()
+        psnr_score = np.mean(psnr_scores)
+        ssim_score = np.mean(ssim_scores)
+        rmse_score = np.mean(rmse_scores)
+        sd_score = np.mean(sd_scores)
+        lpips_score = np.mean(lpips_scores)
+        #lpips_score = loss_fn_vgg(input_list, results_list)
+        #ssim_val = ssim( input_list, results_list, data_range=255, size_average=False)
+       
+        
+        for i, img_tensor in enumerate(input_list):
+            #cv2.imwrite(os.path.join(input_path,('input'+str(i)+'.png')), img_tensor*255)
+            # import pdb; pdb.set_trace()
+            transforms.ToPILImage()(img_tensor[0]).save(os.path.join(input_path,(str(i)+'.png')))
+        for i, img_tensor in enumerate(results_list):
+            #cv2.imwrite(os.path.join(output_path,('output'+str(i)+'.png')), img_tensor*255)
+            transforms.ToPILImage()(img_tensor[0]).save(os.path.join(output_path,(str(i)+'.png')))
+        #import pdb; pdb.set_trace()
+            
+        fid = fid_score.calculate_fid_given_paths([input_path, output_path], 
+                                                        batch_size=50, 
+                                                        device=device, 
+                                                        dims=2048)
+        print('PSNR: ', psnr_score, 'SSIM: ', ssim_score, 'FID: ', fid, 'RMSE: ', rmse_score, 'SD: ', sd_score,'LPIPS: ', lpips_score)
+        with open('evaluate_'+save_name+'_.txt','a') as f:
+            f.write('PSNR: '+ str(psnr_score))
+            f.write('\nSSIM: '+ str(ssim_score))
+            f.write('\nRMSE: '+ str(rmse_score))
+            f.write('\nFID: '+ str(fid))
+            f.write('\nSD: '+ str(sd_score))
+            f.write('\nlpips: '+ str(lpips_score))
+        
+        
         psnr_avg = np.average(psnr_val)
         ssim_avg = np.average(ssim_val)
 
@@ -404,7 +525,7 @@ class BaseModel(ABC):
                 opt.origin_H_W = [(y-128)/128 , (x-128)/128]
                 print(opt.origin_H_W)
                     
-
+                # import pdb; pdb.set_trace()
                 estimated_height = self.netG.depth_model(self.real_A)
                 geo_outputs = geometry_transform.render(opt,self.real_A,estimated_height,self.netG.pano_direction,PE=self.netG.PE)
                 generator_inputs,opacity,depth = geo_outputs['rgb'],geo_outputs['opacity'],geo_outputs['depth']

@@ -1,3 +1,4 @@
+
 _parent_: options/base.yaml
 
 gpu_ids: '0'
@@ -10,15 +11,15 @@ Group: 'craft_feature'
 model: craft_feature                           # model/craft_feature
 arch:   
   gen:                                         ## config for generator
-    netG: imaginaire.generators.craft_2stage_add_style  
+    netG: imaginaire.generators.craft_2stage  
     weight_norm_type: spectral
     activation_norm_type: instance
     padding_mode: reflect
     transform_mode: volum_rendering
     feature_model:
-    style_inject: histo                        # use histogram to inject illumination, chose list [histo, perspective]
+    style_inject: histo                    # use histogram to inject illumination, chose list [histo, perspective]
     cat_PE: 
-    cat_opa: true
+    cat_opa: True
     cat_depth: true
     depth_arch:                                # Density Net
       name: depth
@@ -32,7 +33,7 @@ arch:
       num_downsamples: 4                       
       num_res_blocks: 9                        
       output_nc: 3
-    style_enc_cfg:                            # style injection
+    style_enc_cfg:                              # style injection
       input_image_channels: 3
       num_filters: 256
       kernel_size: 3
@@ -52,13 +53,13 @@ arch:
 
 
 data:                                            # data options
-  dataset: CVACT_Shi                           # dataset name
-  root: ./dataset/CVACT/ 
+  dataset: brooklyn                           # dataset name
+  root: ./dataset/brooklyn_queens/  
   sat_size: [256,256]              
-  pano_size: [512, 128]
+  pano_size: [1024, 256]
   sample_number: 100                           # points per ray
   max_height: 8                                # pre-defined density space in height axis
-  sky_mask: True               
+  sky_mask: True                           
   histo_mode: rgb
   # val: 
   #   sub: 500        

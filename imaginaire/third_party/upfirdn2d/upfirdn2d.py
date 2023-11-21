@@ -14,7 +14,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-import upfirdn2d_cuda
+# import upfirdn2d_cuda
 
 
 def _parse_scaling(scaling):

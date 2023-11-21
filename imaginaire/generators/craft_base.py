@@ -71,6 +71,7 @@ class histo_process(nn.Module):
 
 
     def forward(self,histo):
+        # import pdb; pdb.set_trace()
         x = self.layer1(histo)
         x = self.layer4(x)
         mu = self.fc_mu(x) #[-1,1]
@@ -451,6 +452,7 @@ class inner_Generator_split(nn.Module):
         if z is not None:
             z = self.fc_z_cond(z)
             adapt = torch.chunk(z, 2 * 2, dim=-1)
+        # import pdb; pdb.set_trace()
         input = self.model(input)
         input = self.up0_a(input)
         input = self.up0_b(input)

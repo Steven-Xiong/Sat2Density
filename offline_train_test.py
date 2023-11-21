@@ -18,13 +18,14 @@ def main():
         opt.isTrain = True
     else:
         opt.isTrain = False
-
+    # import pdb;pdb.set_trace()
     opt.name = opt.yaml if opt.name is None else opt.name
     mode = importlib.import_module("model.{}".format(opt.model))
     m = mode.Model(opt)
 
     m.load_dataset(opt)
     m.build_networks(opt)
+    
     # train
     if opt.task in ["train" , "Train"]:
         m.setup_optimizer(opt)

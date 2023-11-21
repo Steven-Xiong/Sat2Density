@@ -1,5 +1,4 @@
 cmake
-numpy==1.22.1
 Pillow>=8.3.2
 scipy
 scikit-image
